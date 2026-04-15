@@ -31,6 +31,19 @@
             opacity: 0.4; animation: moveStars 60s linear infinite;
         }
 
+        /* زر تصفير العدادات (للمدرب فقط) */
+        .reset-btn {
+            position: absolute; top: 20px; right: 20px; z-index: 100;
+            background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444; padding: 8px 15px; border-radius: 8px; cursor: pointer;
+            font-family: inherit; font-weight: bold; transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .reset-btn:hover {
+            background: rgba(239, 68, 68, 0.8); color: white; border-color: #ef4444;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+        }
+
         /* العناوين (الهيدر) */
         .header {
             text-align: center; margin-top: 20px; z-index: 10;
@@ -101,6 +114,8 @@
 
     <div class="stars"></div>
 
+    <button class="reset-btn" onclick="resetDatabase()">تصفير العدادات 🔄</button>
+
     <div class="header">
         <h2>مديرية الشباب والرياضة - سيدي بلعباس</h2>
         <h1>النتائج المباشرة لتحدي الفضاء</h1>
@@ -146,10 +161,35 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // دالة تصفير قاعدة البيانات (الزر السري)
+        function resetDatabase() {
+            if(confirm("تحذير لفريق طموح: هل أنتم متأكدون من مسح جميع بيانات المتسابقين السابقة والبدء من الصفر؟")) {
+                // مسح نقاط التحدي المباشر والنتائج النهائية
+                db.ref('scores').remove()
+                    .then(() => db.ref('final_results').remove())
+                    .then(() => {
+                        alert("تم تصفير العدادات بنجاح! يمكن للإطارات الآن بدء التحدي عبر هواتفهم.");
+                        location.reload(); // إعادة تحميل الصفحة لتحديث الشاشة
+                    })
+                    .catch((error) => {
+                        console.error("خطأ في مسح البيانات: ", error);
+                        alert("حدث خطأ أثناء محاولة مسح البيانات.");
+                    });
+            }
+        }
+
         // الاستماع المباشر للتغيرات في النتائج
         db.ref('scores').on('value', (snap) => {
             const data = snap.val();
-            if (!data) return;
+            
+            // في حال تم تصفير القاعدة أو كانت فارغة
+            if (!data) {
+                document.getElementById('name-1').innerText = "جاري التحديث..."; document.getElementById('score-1').innerText = "0";
+                document.getElementById('name-2').innerText = "جاري التحديث..."; document.getElementById('score-2').innerText = "0";
+                document.getElementById('name-3').innerText = "جاري التحديث..."; document.getElementById('score-3').innerText = "0";
+                document.getElementById('others-list').innerHTML = "";
+                return;
+            }
 
             // حساب المجموع لكل مشارك
             let scores = {};
@@ -168,14 +208,12 @@
             // 2. تحديث قائمة بقية المشاركين (المركز الرابع فما فوق)
             const listContainer = document.getElementById('others-list');
             
-            // التعامل مع الأسطر من المركز الرابع (index 3) إلى النهاية
             for (let i = 3; i < sorted.length; i++) {
                 let p = sorted[i];
-                let safeId = 'p-' + p.n.replace(/[^a-zA-Z0-9]/g, '-'); // معالجة آمنة للمعرفات (ID)
+                let safeId = 'p-' + p.n.replace(/[^a-zA-Z0-9]/g, '-'); 
                 
                 let row = document.getElementById(safeId);
                 
-                // إذا كان المستخدم جديداً في القائمة (لم يتم إنشاء سطر له بعد)
                 if (!row) {
                     row = document.createElement('div');
                     row.id = safeId;
@@ -183,8 +221,6 @@
                     listContainer.appendChild(row);
                 }
                 
-                // تحديث مكان السطر (الأنيميشن) والمحتوى
-                // 60px هي المسافة العمودية بين كل سطر (الارتفاع 50 + هامش 10)
                 let visualPositionIndex = i - 3; 
                 row.style.top = (visualPositionIndex * 60) + 'px'; 
                 row.innerHTML = `<span class="p-rank">#${i+1}</span><span>${p.n}</span><span class="p-score">${p.s}</span>`;
