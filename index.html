@@ -2,40 +2,136 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>لوحة الشرف الفلكية</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة الشرف الفلكية المباشرة - فريق طموح</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #050510; color: white; margin: 0; padding: 20px; overflow: hidden; }
-        h1 { color: #00d2ff; text-align: center; margin-bottom: 5px; font-size: 2.5em; text-transform: uppercase; }
-        
-        #leaderboard-container { 
-            position: relative; max-width: 900px; margin: auto; 
-            background: rgba(255, 255, 255, 0.03); 
-            border-radius: 15px; padding: 10px; height: 85vh;
+        :root {
+            --bg-dark: #020617;
+            --primary: #0ea5e9;
+            --gold: #fbbf24;
+            --silver: #cbd5e1;
+            --bronze: #cd7f32;
+            --glass: rgba(15, 23, 42, 0.6);
+            --border: rgba(14, 165, 233, 0.2);
         }
 
-        .player-row { 
-            position: absolute; left: 10px; right: 10px; height: 40px; /* تقليل الارتفاع */
+        body {
+            font-family: 'Tajawal', sans-serif; background: var(--bg-dark);
+            background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%);
+            color: white; margin: 0; padding: 0; overflow: hidden; height: 100vh;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        .stars {
+            position: absolute; width: 100%; height: 100%; z-index: -1;
+            background: transparent url('https://www.transparenttextures.com/patterns/stardust.png') repeat;
+            opacity: 0.4; animation: moveStars 60s linear infinite;
+        }
+
+        /* العناوين (الهيدر) */
+        .header {
+            text-align: center; margin-top: 20px; z-index: 10;
+        }
+        .header h2 { font-size: 1.5rem; color: #94a3b8; margin: 0; letter-spacing: 2px; }
+        .header h1 { font-size: 4rem; color: white; margin: 5px 0; text-shadow: 0 0 30px rgba(14, 165, 233, 0.8); }
+        .team-badge { display: inline-block; background: rgba(14, 165, 233, 0.1); border: 1px solid var(--primary); padding: 5px 20px; border-radius: 20px; color: var(--primary); font-weight: bold; margin-bottom: 20px; }
+
+        /* منطقة المحتوى الرئيسية (مقسمة لقسمين) */
+        .main-container {
+            display: flex; width: 95%; max-width: 1400px; height: 75vh; gap: 40px; margin-top: 20px;
+        }
+
+        /* 1. منصة التتويج (لأفضل 3) */
+        .podium-section {
+            flex: 1.2; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 50px; gap: 20px;
+        }
+        
+        .podium-spot {
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+            background: var(--glass); border: 1px solid var(--border); border-bottom: none;
+            border-radius: 20px 20px 0 0; backdrop-filter: blur(10px); padding: 20px; transition: all 1s ease;
+            box-shadow: inset 0 20px 50px rgba(0,0,0,0.5);
+            width: 180px; text-align: center;
+        }
+
+        .podium-spot .score { font-size: 2rem; font-weight: 900; margin-top: 10px; }
+        .podium-spot .name { font-size: 1.3rem; color: #e2e8f0; font-weight: bold; word-break: break-word; }
+
+        /* تخصيص المراكز 1، 2، 3 */
+        .rank-1 { height: 350px; border-color: var(--gold); background: rgba(251, 191, 36, 0.1); box-shadow: 0 -20px 50px rgba(251, 191, 36, 0.2); z-index: 3; animation: pulseGold 2s infinite; }
+        .rank-1 .score { color: var(--gold); text-shadow: 0 0 20px var(--gold); }
+        
+        .rank-2 { height: 280px; border-color: var(--silver); background: rgba(203, 213, 225, 0.1); z-index: 2; }
+        .rank-2 .score { color: var(--silver); }
+        
+        .rank-3 { height: 220px; border-color: var(--bronze); background: rgba(205, 127, 50, 0.1); z-index: 1; }
+        .rank-3 .score { color: var(--bronze); }
+
+        .trophy { font-size: 4rem; margin-bottom: 10px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5)); }
+
+        /* 2. قائمة بقية المشاركين (ترتيب تصاعدي) */
+        .list-section {
+            flex: 1; background: var(--glass); border: 1px solid var(--border); border-radius: 20px;
+            backdrop-filter: blur(10px); padding: 20px; position: relative; overflow: hidden;
+        }
+        .list-title { text-align: center; color: var(--primary); font-size: 1.5rem; font-weight: bold; margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
+
+        .list-container {
+            position: relative; height: calc(100% - 50px); width: 100%;
+        }
+
+        .player-row {
+            position: absolute; left: 0; right: 0; height: 50px;
             display: flex; justify-content: space-between; align-items: center;
-            background: #16213e; padding: 0 15px; border-radius: 5px; 
-            font-size: 1.1em; transition: all 1s ease-in-out; box-sizing: border-box;
+            background: rgba(0,0,0,0.4); padding: 0 20px; border-radius: 10px; border-left: 4px solid var(--primary);
+            font-size: 1.2rem; font-weight: bold; transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #e2e8f0; box-sizing: border-box;
         }
+        .player-row .p-rank { color: var(--text-muted); font-size: 1rem; width: 30px; }
+        .player-row .p-score { color: var(--primary); font-family: monospace; font-size: 1.3rem;}
 
-        .rank-1 { background: #f9a826; color: black; font-weight: bold; transform: scale(1.02); z-index: 10; }
-        .rank-2 { background: #e0e0e0; color: black; z-index: 9; }
-        .rank-3 { background: #cd7f32; color: white; z-index: 8; }
-        
-        /* تأثير النجوم في الخلفية */
-        .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: url('https://www.transparenttextures.com/patterns/stardust.png'); opacity: 0.3; }
+        @keyframes moveStars { from { background-position: 0 0; } to { background-position: -5000px 5000px; } }
+        @keyframes pulseGold { 0% { box-shadow: 0 -20px 50px rgba(251, 191, 36, 0.1); } 50% { box-shadow: 0 -20px 80px rgba(251, 191, 36, 0.4); } 100% { box-shadow: 0 -20px 50px rgba(251, 191, 36, 0.1); } }
     </style>
 </head>
 <body>
-    <div class="stars"></div>
-    <h1>🔭 قائمة فرسان الفلك 🚀</h1>
-    <p style="text-align:center; color: #aaa; margin-top:0;">مديرية الشباب والرياضة - سيدي بلعباس</p>
 
-    <div id="leaderboard-container"></div>
+    <div class="stars"></div>
+
+    <div class="header">
+        <h2>مديرية الشباب والرياضة - سيدي بلعباس</h2>
+        <h1>النتائج المباشرة لتحدي الفضاء</h1>
+        <div class="team-badge">تنظيم وإشراف: فريق طمــوح</div>
+    </div>
+
+    <div class="main-container">
+        <div class="podium-section">
+            <div class="podium-spot rank-2" id="podium-2">
+                <div class="trophy">🥈</div>
+                <div class="name" id="name-2">جاري التحديث...</div>
+                <div class="score" id="score-2">0</div>
+            </div>
+            <div class="podium-spot rank-1" id="podium-1">
+                <div class="trophy">🏆</div>
+                <div class="name" id="name-1">جاري التحديث...</div>
+                <div class="score" id="score-1">0</div>
+            </div>
+            <div class="podium-spot rank-3" id="podium-3">
+                <div class="trophy">🥉</div>
+                <div class="name" id="name-3">جاري التحديث...</div>
+                <div class="score" id="score-3">0</div>
+            </div>
+        </div>
+
+        <div class="list-section">
+            <h3 class="list-title">بقية الإطارات المشاركة 🚀</h3>
+            <div class="list-container" id="others-list">
+                </div>
+        </div>
+    </div>
 
     <script>
         const firebaseConfig = {
@@ -50,35 +146,49 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // الاستماع المباشر للتغيرات في النتائج
         db.ref('scores').on('value', (snap) => {
             const data = snap.val();
-            const container = document.getElementById('leaderboard-container');
             if (!data) return;
 
+            // حساب المجموع لكل مشارك
             let scores = {};
             for (let k in data) {
                 scores[data[k].name] = (scores[data[k].name] || 0) + data[k].score;
             }
 
+            // ترتيب تنازلي (الأعلى نقاطاً أولاً)
             let sorted = Object.keys(scores).map(n => ({n: n, s: scores[n]})).sort((a,b) => b.s - a.s);
 
-            sorted.forEach((p, i) => {
-                let id = 'p-' + p.n.replace(/\s+/g, '-');
-                let row = document.getElementById(id);
+            // 1. تحديث منصة التتويج (المراكز الثلاثة الأولى)
+            if(sorted[0]) { document.getElementById('name-1').innerText = sorted[0].n; document.getElementById('score-1').innerText = sorted[0].s; }
+            if(sorted[1]) { document.getElementById('name-2').innerText = sorted[1].n; document.getElementById('score-2').innerText = sorted[1].s; }
+            if(sorted[2]) { document.getElementById('name-3').innerText = sorted[2].n; document.getElementById('score-3').innerText = sorted[2].s; }
+
+            // 2. تحديث قائمة بقية المشاركين (المركز الرابع فما فوق)
+            const listContainer = document.getElementById('others-list');
+            
+            // التعامل مع الأسطر من المركز الرابع (index 3) إلى النهاية
+            for (let i = 3; i < sorted.length; i++) {
+                let p = sorted[i];
+                let safeId = 'p-' + p.n.replace(/[^a-zA-Z0-9]/g, '-'); // معالجة آمنة للمعرفات (ID)
+                
+                let row = document.getElementById(safeId);
+                
+                // إذا كان المستخدم جديداً في القائمة (لم يتم إنشاء سطر له بعد)
                 if (!row) {
                     row = document.createElement('div');
-                    row.id = id;
+                    row.id = safeId;
                     row.className = 'player-row';
-                    container.appendChild(row);
+                    listContainer.appendChild(row);
                 }
-                row.style.top = (i * 45 + 10) + 'px'; // 45px مسافة بين كل سطر
-                row.innerHTML = `<span>#${i+1} - ${p.n}</span><span>${p.s} نقطة</span>`;
                 
-                row.classList.remove('rank-1', 'rank-2', 'rank-3');
-                if(i==0) row.classList.add('rank-1');
-                else if(i==1) row.classList.add('rank-2');
-                else if(i==2) row.classList.add('rank-3');
-            });
+                // تحديث مكان السطر (الأنيميشن) والمحتوى
+                // 60px هي المسافة العمودية بين كل سطر (الارتفاع 50 + هامش 10)
+                let visualPositionIndex = i - 3; 
+                row.style.top = (visualPositionIndex * 60) + 'px'; 
+                row.innerHTML = `<span class="p-rank">#${i+1}</span><span>${p.n}</span><span class="p-score">${p.s}</span>`;
+            }
         });
     </script>
 </body>
